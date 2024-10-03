@@ -1,0 +1,98 @@
+#include <LiquidCrystal.h>
+
+#define sensorPower 10
+#define sensorPin A0
+#define buttonPin 13
+int level = 0;
+unsigned long duration;
+float distance;
+const int trigPin = 8;
+const int echoPin = 9;
+bool isFloating = false;
+bool buttonState = HIGH;       // Current button state
+bool lastButtonState = HIGH;   // Previous button state
+bool lcdState = false;         // LCD state: false is off, true is on
+unsigned long lastDebounceTime = 0;  // Last time the output pin was toggled
+unsigned long debounceDelay = 50;    // The debounce time; increase if the output flickers
+
+// Initialize the LCD with the numbers of the interface pins
+LiquidCrystal lcd(2, 3, 4, 5, 6, 7);
+
+void setup() {
+  pinMode(sensorPower, OUTPUT);
+  digitalWrite(sensorPower, HIGH); // Keep sensor powered on
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  pinMode(buttonPin, INPUT_PULLUP); // Use internal pull-up resistor for the button
+  Serial.begin(9600);
+  
+  // Initialize the LCD
+  lcd.begin(16, 2); // Typical 16x2 LCD
+}
+
+void loop() {
+  // Read the state of the pushbutton
+  int reading = digitalRead(buttonPin);
+
+  // Check if the button state has changed
+  if (reading != lastButtonState) {
+    lastDebounceTime = millis();
+  }
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != buttonState) {
+      buttonState = reading;
+      
+      // If the button is pressed (LOW state)
+      if (buttonState == LOW) {
+        lcdState = !lcdState; // Toggle the LCD state
+        if (lcdState) {
+          updateLCD();
+        } else {
+          lcd.clear(); // Clear the LCD display
+        }
+      }
+    }
+  }
+
+  lastButtonState = reading;
+}
+
+void updateLCD() {
+  // Measure water level
+  level = analogRead(sensorPin);
+
+  // Measure distance with ultrasonic sensor
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  
+  duration = pulseIn(echoPin, HIGH);
+  distance = (duration * 0.0343) / 2;
+  
+  lcd.clear();
+  
+  // Print on LCD
+  lcd.setCursor(0, 0);
+  lcd.print("Distance: ");
+  lcd.print(distance);
+  lcd.print(" cm");
+  Serial.print(distance);
+  Serial.print(" ");
+
+  
+
+  
+
+  lcd.setCursor(0, 1);
+  if (distance < 7.4) {
+    lcd.print("Egg is bad");
+  } else if (distance >= 7.4 && distance <= 14) {
+    lcd.print("Egg is good");
+  } else {
+    lcd.print("No Egg");
+  }
+ 
+}
